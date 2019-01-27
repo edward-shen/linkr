@@ -1,0 +1,2 @@
+[global.databases]
+linkrdb = { url = "postgres://linkr@localhost/linkrdb" }

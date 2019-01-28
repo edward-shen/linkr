@@ -4,11 +4,16 @@ version = "0.1.0"
 authors = ["Edward Shen <code@eddie.sh>"]
 edition = "2018"
 
+description = "Lightweight self-hosted personal link shortening and renaming service"
+repository = "https://github.com/edward-shen/linkr"
+
+readme = "readme.md"
+license = "AGPL-3.0-or-later"
+
 [dependencies]
 rocket = "0.4.0"
 url = "1.7.2"
 diesel = { version = "1.0.0", features = ["postgres"] }
-rand = "0.6.4"
 dotenv = "0.13.0"
 
 [dependencies.rocket_contrib]

@@ -58,7 +58,7 @@ To make a redirected URL via cURL...
 The server will respond with one of the following:
     201 CREATED                 The link was successfully created.
     401 UNAUTHORIZED            The password provided was incorrect.
-    403 CONFLICT                A link already exists on this domain.
+    409 CONFLICT                A link already exists on this domain.
     500 INTERNAL SERVER ERROR   Something bad happened and you should file a bug report.
 
 To delete a URL via cURL...

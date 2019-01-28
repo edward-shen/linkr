@@ -12,6 +12,8 @@ use std::collections::HashMap;
 use rocket::response::Redirect;
 use rocket::request::Form;
 use rocket_contrib::templates::Template;
+use rocket_contrib::serve::StaticFiles;
+
 
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
@@ -42,7 +44,7 @@ fn index(conn: Database, url: String) -> Option<Redirect> {
     // format!("hello world, you tried to access {}", url)
 }
 
-#[get("/web/login")]
+#[get("/")]
 fn login() -> Template {
     let mut context = HashMap::new();
     context.insert("potato", "field");
@@ -69,9 +71,10 @@ fn create_user(conn: Database) -> String {
 struct CreateLink {
     origin: String,
     dest: String,
+    private: bool,
 }
 
-#[post("/web/new_link", data = "<link>")]
+#[post("/api/new_link", data = "<link>")]
 fn new_link(conn: Database, link: Form<CreateLink>) -> String {
     use schema::links;
 
@@ -79,7 +82,7 @@ fn new_link(conn: Database, link: Form<CreateLink>) -> String {
         owner: None,
         origin: link.origin.clone(),
         dest: link.dest.clone(),
-        is_private: false,
+        is_private: link.private,
     };
 
     diesel::insert_into(links::table)
@@ -94,6 +97,7 @@ fn new_link(conn: Database, link: Form<CreateLink>) -> String {
 fn main() {
     rocket::ignite()
         .mount("/", routes![index, login, create_user, new_link])
+        .mount("/static", StaticFiles::from("./static"))
         .attach(Template::fairing())
         .attach(Database::fairing())
         .launch();

@@ -8,8 +8,10 @@ edition = "2018"
 rocket = "0.4.0"
 url = "1.7.2"
 diesel = { version = "1.0.0", features = ["postgres"] }
+rand = "0.6.4"
+dotenv = "0.13.0"
 
 [dependencies.rocket_contrib]
 version = "0.4.0"
 default-features = false
-features = ["handlebars_templates", "diesel_postgres_pool", "serve"]
+features = ["diesel_postgres_pool"]

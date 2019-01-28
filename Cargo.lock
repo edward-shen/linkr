@@ -355,7 +355,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "linkr"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "diesel 1.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "dotenv 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",

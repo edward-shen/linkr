@@ -58,7 +58,7 @@ To make a redirected URL via cURL...
 The server will respond with one of the following:
     201 CREATED                 The link was successfully created.
     401 UNAUTHORIZED            The password provided was incorrect.
-    403 FORBIDDEN               A link already exists on this domain.
+    403 CONFLICT                A link already exists on this domain.
     500 INTERNAL SERVER ERROR   Something bad happened and you should file a bug report.
 
 To delete a URL via cURL...
@@ -100,7 +100,7 @@ fn new_link(conn: Database, link: Form<CreateLink>) -> Status {
     {
         Ok(_) => Status::Created,
         Err(DatabaseError(diesel::result::DatabaseErrorKind::UniqueViolation, _)) => {
-            Status::Forbidden
+            Status::Conflict
         }
         Err(_) => Status::InternalServerError,
     }

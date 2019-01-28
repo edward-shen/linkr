@@ -15,17 +15,35 @@ user called `linkr`. Connecting via the following URL should yield success.
 postgres://linkr@localhost/linkrdb
 ```
 
-### 2. Install linkr
-```bash
-cargo install linkr
+### 2. Set up linkr
+
+First, we need to set up diesel.
+```
+cargo install diesel_cli
 ```
 
-### 3. Configuring linkr
-Create or edit an .env file with the following fields:
+Next, download linkr.
+
+```bash
+git clone git@github.com:edward-shen/linkr
+```
+
+Create or edit `.env` file with the following fields:
 ```bash
 LINKR_PASSWORD=YOUR-SECURE-PASSWORD-HERE
+DATABASE_URL=postgres://linkr@localhost/linkrdb
 ```
 
+Run the migrations (Make sure ~/.cargo/bin is in your path):
+```
+diesel migration run
+```
+
+Then you can install and run linkr
+```
+cargo install linkr
+linkr
+```
 ## Usage
 
 ### Creating a link

@@ -71,9 +71,12 @@ The server will respond with one of the following:
 | --------: | ----------------------- | ---
 |       201 | CREATED                 | The link was successfully created.
 |       401 | UNAUTHORIZED            | The password provided was incorrect.
+|       422 | UNPROCESSABLE ENTITY    | You are missing a field, or a field failed a certain constraint.
 |       409 | CONFLICT                | A link already exists on this domain.
 |       500 | INTERNAL SERVER ERROR   | Something bad happened and you should file a bug report.
 
+There are some limitations:
+ - all characters of `origin` are either alphanumeric, "-", or "_"
 
 ### Deleting a link
 

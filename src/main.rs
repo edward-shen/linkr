@@ -1,4 +1,4 @@
-#![feature(proc_macro_hygiene, decl_macro)]
+#![feature(proc_macro_hygiene, decl_macro, bind_by_move_pattern_guards)]
 
 #[macro_use]
 extern crate rocket;
@@ -9,9 +9,10 @@ extern crate diesel;
 
 use std::env;
 
-use rocket::http::Status;
-use rocket::request::Form;
+use rocket::http::{RawStr, Status};
+use rocket::request::{Form, FromFormValue};
 use rocket::response::Redirect;
+use rocket::Request;
 
 use dotenv::dotenv;
 
@@ -76,11 +77,33 @@ The server will respond with one of the following:
 
 #[derive(FromForm)]
 struct CreateLink {
-    origin: String,
+    origin: URLText,
     dest: String,
     password: String,
 }
 
+struct URLText(String);
+
+impl<'v> FromFormValue<'v> for URLText {
+    type Error = &'v RawStr;
+    
+    fn from_form_value(form_value: &'v RawStr) -> Result<URLText, &'v RawStr> {
+        match form_value.parse::<String>() {
+            Ok(link) if is_valid_origin(&link) => Ok(URLText(link)),
+            _ => Err(form_value),
+        }
+    }
+}
+
+fn is_valid_origin(string: &String) -> bool {
+    for c in string.chars() {
+        if !c.is_ascii_alphanumeric() && c != '-' && c != '_' {
+            return false;
+        }
+    }
+
+    return true;
+}
 #[post("/api/link", data = "<link>")]
 fn new_link(conn: Database, link: Form<CreateLink>) -> Status {
     use schema::links;
@@ -90,7 +113,7 @@ fn new_link(conn: Database, link: Form<CreateLink>) -> Status {
     }
 
     let new_link = NewLink {
-        origin: link.origin.clone(),
+        origin: link.origin.0.clone(),
         dest: link.dest.clone(),
     };
 
@@ -108,7 +131,7 @@ fn new_link(conn: Database, link: Form<CreateLink>) -> Status {
 
 #[derive(FromForm)]
 struct DeleteLink {
-    origin: String,
+    origin: URLText,
     password: String,
 }
 
@@ -120,7 +143,7 @@ fn delete_link(conn: Database, link: Form<DeleteLink>) -> Status {
         return Status::Unauthorized;
     }
 
-    match diesel::delete(links.filter(origin.eq(&link.origin))).execute(&conn.0) {
+    match diesel::delete(links.filter(origin.eq(&link.origin.0))).execute(&conn.0) {
         Ok(_) => Status::Ok,
         Err(_) => Status::InternalServerError,
     }
@@ -134,6 +157,7 @@ fn main() {
 
     rocket::ignite()
         .mount("/", routes![introduction, index, new_link, delete_link])
+        // .register(catchers![not_found])
         .attach(Database::fairing())
         .launch();
 }

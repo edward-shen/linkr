@@ -1,6 +1,6 @@
 [package]
 name = "linkr"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Edward Shen <code@eddie.sh>"]
 edition = "2018"
 
@@ -13,6 +13,7 @@ license = "AGPL-3.0-or-later"
 [dependencies]
 rocket = "0.4.0"
 diesel = { version = "1.0.0", features = ["postgres"] }
+diesel_migrations = "1.4.0"
 dotenv = "0.13.0"
 
 [dependencies.rocket_contrib]

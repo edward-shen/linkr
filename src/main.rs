@@ -1,32 +1,28 @@
 #![feature(proc_macro_hygiene, decl_macro, bind_by_move_pattern_guards)]
 
-#[macro_use]
-extern crate rocket;
-#[macro_use]
-extern crate rocket_contrib;
-#[macro_use]
-extern crate diesel;
+#[macro_use] extern crate rocket;
+#[macro_use] extern crate rocket_contrib;
+#[macro_use] extern crate diesel;
+#[macro_use] extern crate diesel_migrations;
+
+mod models;
+mod schema;
 
 use std::env;
 
 use rocket::http::{RawStr, Status};
 use rocket::request::{Form, FromFormValue};
 use rocket::response::Redirect;
-use rocket::Request;
 
 use dotenv::dotenv;
 
-use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use diesel::pg::PgConnection;
 use diesel::result::Error::DatabaseError;
 
-mod models;
-mod schema;
+use toml::Value;
 
 use models::*;
-
-#[database("linkrdb")]
-struct Database(PgConnection);
 
 #[get("/<url>")]
 fn index(conn: Database, url: String) -> Option<Redirect> {
@@ -149,11 +145,28 @@ fn delete_link(conn: Database, link: Form<DeleteLink>) -> Status {
     }
 }
 
+#[database("linkrdb")]
+struct Database(PgConnection);
+
 fn main() {
     dotenv().ok();
 
-    env::var("LINKR_PASSWORD")
-        .expect("LINKR_PASSWORD env variable not found. Please put it in .env or declare it!");
+    env::var("LINKR_PASSWORD").expect("LINKR_PASSWORD env variable not found. Please put it in .env or declare it!");
+
+    embed_migrations!();
+
+    let database_url = env::var("ROCKET_DATABASES")
+        .expect("DATABASE_URL must be set!");
+    let database_url = database_url.as_str();
+
+    // This is really gross but I don't know of a better way
+    // FIXME: make this less gross
+    // Value of database_url is {linkrdb={url=postgres://linkr@localhost/linkrdb}}
+    // but I have no idea what langauge it's in?
+    let database_url = &database_url[database_url.rfind("=").unwrap() + 1..database_url.rfind("}").unwrap() - 1 ];
+    let connection = PgConnection::establish(&database_url).expect(&format!("Could not connect to {}", database_url));
+    
+    embedded_migrations::run(&connection);
 
     rocket::ignite()
         .mount("/", routes![introduction, index, new_link, delete_link])

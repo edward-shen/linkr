@@ -9,41 +9,44 @@ written in safe Rust, with an emphasis on RESTful APIs first.
 ## Installation
 
 ### 1. Install and setup PostgreSQL
-As of 0.1.0, linkr expects a locally-hosted PostgreSQL server, with a database named `linkrdb` and a
-user called `linkr`. Connecting via the following URL should yield success.
+
+Please install PostgreSQL via your distribution's preferred method.
+Then, please create a user with access to a clean database. Database migrations
+are embedded into the application and will be performed automatically.
+
+For example, one may create a `linkr` user who has access to only `linkrdb` on a
+locally-hosted PostgreSQL instance. To access the database, their URL would be
 ```
 postgres://linkr@localhost/linkrdb
 ```
+This URL (or your setup's equivalent) is needed in the following steps.
 
 ### 2. Set up linkr
 
-First, we need to set up diesel.
-```
-cargo install diesel_cli
-```
-
-Next, download linkr.
-
+Install linkr.
 ```bash
-git clone git@github.com:edward-shen/linkr
+cargo install linkr
 ```
 
-Create or edit `.env` file with the following fields:
+Make sure that `~/.cargo/bin` is in your path. This is required 
+
+An `.env` file must be in the current working directory when running `linkr`.
+Create a `.env` file with the following fields:
 ```bash
 LINKR_PASSWORD=YOUR-SECURE-PASSWORD-HERE
-DATABASE_URL=postgres://linkr@localhost/linkrdb
+DATABASE_URL={linkrdb={url="POSTGRES-URL-HERE"}}
 ```
 
-Run the migrations (Make sure ~/.cargo/bin is in your path):
-```
-diesel migration run
-```
+These fields are environment variables. While not recommended, you can also simply
+pass the environment variables to the command.
 
-Then you can install and run linkr
-```
-cargo install linkr
+Finally, run linkr:
+```bash
 linkr
 ```
+
+It is up to the end-user to daemoning linkr.
+
 ## Usage
 
 ### Creating a link

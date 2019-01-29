@@ -20,8 +20,6 @@ use diesel::prelude::*;
 use diesel::pg::PgConnection;
 use diesel::result::Error::DatabaseError;
 
-use toml::Value;
-
 use models::*;
 
 #[get("/<url>")]

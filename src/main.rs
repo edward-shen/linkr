@@ -154,7 +154,7 @@ fn main() {
     embed_migrations!();
 
     let database_url = env::var("ROCKET_DATABASES")
-        .expect("DATABASE_URL must be set!");
+        .expect("ROCKET_DATABASES must be set!");
     let database_url = database_url.as_str();
 
     // This is really gross but I don't know of a better way

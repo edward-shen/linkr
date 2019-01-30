@@ -1,9 +1,13 @@
 #![feature(proc_macro_hygiene, decl_macro, bind_by_move_pattern_guards)]
 
-#[macro_use] extern crate rocket;
-#[macro_use] extern crate rocket_contrib;
-#[macro_use] extern crate diesel;
-#[macro_use] extern crate diesel_migrations;
+#[macro_use]
+extern crate rocket;
+#[macro_use]
+extern crate rocket_contrib;
+#[macro_use]
+extern crate diesel;
+#[macro_use]
+extern crate diesel_migrations;
 extern crate chrono;
 
 mod models;
@@ -17,8 +21,8 @@ use rocket::response::Redirect;
 
 use dotenv::dotenv;
 
-use diesel::prelude::*;
 use diesel::pg::PgConnection;
+use diesel::prelude::*;
 use diesel::result::Error::DatabaseError;
 
 use chrono::naive::NaiveDateTime;
@@ -83,7 +87,7 @@ struct URLText(String);
 
 impl<'v> FromFormValue<'v> for URLText {
     type Error = &'v RawStr;
-    
+
     fn from_form_value(form_value: &'v RawStr) -> Result<URLText, &'v RawStr> {
         match form_value.parse::<String>() {
             Ok(link) if is_valid_origin(&link) => Ok(URLText(link)),
@@ -112,6 +116,9 @@ fn new_link(conn: Database, link: Form<CreateLink>) -> Status {
     let new_link = NewLink {
         origin: link.origin.0.clone(),
         dest: link.dest.clone(),
+        owner: None,
+        expire_date: None,
+        expire_clicks: None,
     };
 
     match diesel::insert_into(links::table)
@@ -152,22 +159,24 @@ struct Database(PgConnection);
 fn main() {
     dotenv().ok();
 
-    env::var("LINKR_PASSWORD").expect("LINKR_PASSWORD env variable not found. Please put it in .env or declare it!");
+    env::var("LINKR_PASSWORD")
+        .expect("LINKR_PASSWORD env variable not found. Please put it in .env or declare it!");
 
     embed_migrations!();
 
-    let database_url = env::var("ROCKET_DATABASES")
-        .expect("ROCKET_DATABASES must be set!");
+    let database_url = env::var("ROCKET_DATABASES").expect("ROCKET_DATABASES must be set!");
     let database_url = database_url.as_str();
 
     // This is really gross but I don't know of a better way
     // FIXME: make this less gross
     // Value of database_url is {linkrdb={url=postgres://linkr@localhost/linkrdb}}
     // but I have no idea what langauge it's in?
-    let database_url = &database_url[database_url.rfind("=").unwrap() + 1..database_url.rfind("}").unwrap() - 1 ];
-    let connection = PgConnection::establish(&database_url).expect(&format!("Could not connect to {}", database_url));
-    
-    embedded_migrations::run(&connection);
+    let database_url =
+        &database_url[database_url.rfind("=").unwrap() + 1..database_url.rfind("}").unwrap() - 1];
+    let connection = PgConnection::establish(&database_url)
+        .expect(&format!("Could not connect to {}", database_url));
+
+    embedded_migrations::run(&connection).expect("Could not run migrations!");
 
     rocket::ignite()
         .mount("/", routes![introduction, index, new_link, delete_link])

@@ -10,6 +10,7 @@ extern crate diesel;
 extern crate diesel_migrations;
 extern crate chrono;
 
+mod auth;
 mod models;
 mod schema;
 

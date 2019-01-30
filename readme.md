@@ -34,7 +34,7 @@ An `.env` file must be in the current working directory when running `linkr`.
 Create a `.env` file with the following fields:
 ```bash
 LINKR_PASSWORD=YOUR-SECURE-PASSWORD-HERE
-DATABASE_URL={linkrdb={url="POSTGRES-URL-HERE"}}
+ROCKET_DATABASES={linkrdb={url="POSTGRES-URL-HERE"}}
 ```
 
 These fields are environment variables. While not recommended, you can also simply

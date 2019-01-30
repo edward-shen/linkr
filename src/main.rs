@@ -4,6 +4,7 @@
 #[macro_use] extern crate rocket_contrib;
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate diesel_migrations;
+extern crate chrono;
 
 mod models;
 mod schema;
@@ -19,6 +20,8 @@ use dotenv::dotenv;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
 use diesel::result::Error::DatabaseError;
+
+use chrono::naive::NaiveDateTime;
 
 use models::*;
 

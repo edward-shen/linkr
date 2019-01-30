@@ -1,42 +1,40 @@
 use crate::schema::links;
+use crate::schema::token_key_map;
+use chrono::naive::NaiveDateTime;
 
-// #[derive(Queryable)]
-// pub struct User {
-//     pub id: i32,
-//     pub username: String,
-//     pub password: String,
-//     pub email: String,
-// }
+#[derive(Queryable)]
+pub struct TokenKeyMap {
+    pub id: i32,
+    pub token: String,
+    pub key: String,
+}
 
-// #[derive(Insertable)]
-// #[table_name="users"]
-// pub struct NewUser {
-//     pub username: String,
-//     pub password: String,
-//     pub email: String,
-// }
+#[derive(Insertable)]
+#[table_name = "token_key_map"]
+pub struct NewTokenKeyMap {
+    pub token: String,
+    pub key: String,
+}
 
 #[derive(Queryable)]
 pub struct Link {
     pub id: i32,
-    // pub owner: Option<i32>,
+    pub owner: Option<String>,
     pub origin: String,
     pub dest: String,
-    // pub is_private: bool,
+    pub creation_date: NaiveDateTime,
+    pub last_used: Option<NaiveDateTime>,
     pub clicks: i32,
-    // lifespan: i32,
-    // expiration_date:
-    // created_date:
+    pub expire_date: Option<NaiveDateTime>,
+    pub expire_clicks: Option<i32>,
 }
 
 #[derive(Insertable)]
 #[table_name = "links"]
 pub struct NewLink {
-    // pub owner: Option<i32>,
+    pub owner: Option<String>,
     pub origin: String,
     pub dest: String,
-    // pub is_private: bool,
-    // lifespan: i32,
-    // expiration_date:
-    // created_date:
+    pub expire_date: Option<NaiveDateTime>,
+    pub expire_clicks: Option<i32>,
 }

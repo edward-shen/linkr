@@ -26,7 +26,7 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::result::Error::DatabaseError;
 
-use chrono::naive::NaiveDateTime;
+// use chrono::naive::NaiveDateTime;
 
 use models::*;
 
@@ -81,7 +81,6 @@ The server will respond with one of the following:
 struct CreateLink {
     origin: URLText,
     dest: String,
-    password: String,
 }
 
 struct URLText(String);
@@ -110,10 +109,6 @@ fn is_valid_origin(string: &String) -> bool {
 fn new_link(conn: Database, link: Form<CreateLink>) -> Status {
     use schema::links;
 
-    if link.password != env::var("LINKR_PASSWORD").unwrap() {
-        return Status::Unauthorized;
-    }
-
     let new_link = NewLink {
         origin: link.origin.0.clone(),
         dest: link.dest.clone(),
@@ -137,16 +132,11 @@ fn new_link(conn: Database, link: Form<CreateLink>) -> Status {
 #[derive(FromForm)]
 struct DeleteLink {
     origin: URLText,
-    password: String,
 }
 
 #[delete("/api/link", data = "<link>")]
 fn delete_link(conn: Database, link: Form<DeleteLink>) -> Status {
     use schema::links::dsl::*;
-
-    if link.password != env::var("LINKR_PASSWORD").unwrap() {
-        return Status::Unauthorized;
-    }
 
     match diesel::delete(links.filter(origin.eq(&link.origin.0))).execute(&conn.0) {
         Ok(_) => Status::Ok,
@@ -160,11 +150,26 @@ struct Database(PgConnection);
 fn main() {
     dotenv().ok();
 
-    env::var("LINKR_PASSWORD")
-        .expect("LINKR_PASSWORD env variable not found. Please put it in .env or declare it!");
+    run_migrations();
 
+    rocket::ignite()
+        .mount("/", routes![introduction, index, new_link, delete_link])
+        // .register(catchers![not_found])
+        .attach(Database::fairing())
+        .launch();
+}
+
+fn run_migrations() {
     embed_migrations!();
 
+    let database_url = parse_database_env();
+    let connection = PgConnection::establish(&database_url)
+        .expect(&format!("Could not connect to {}", database_url));
+
+    embedded_migrations::run(&connection).expect("Could not run migrations!");
+}
+
+fn parse_database_env() -> String {
     let database_url = env::var("ROCKET_DATABASES").expect("ROCKET_DATABASES must be set!");
     let database_url = database_url.as_str();
 
@@ -172,16 +177,7 @@ fn main() {
     // FIXME: make this less gross
     // Value of database_url is {linkrdb={url=postgres://linkr@localhost/linkrdb}}
     // but I have no idea what langauge it's in?
-    let database_url =
-        &database_url[database_url.rfind("=").unwrap() + 1..database_url.rfind("}").unwrap() - 1];
-    let connection = PgConnection::establish(&database_url)
-        .expect(&format!("Could not connect to {}", database_url));
-
-    embedded_migrations::run(&connection).expect("Could not run migrations!");
-
-    rocket::ignite()
-        .mount("/", routes![introduction, index, new_link, delete_link])
-        // .register(catchers![not_found])
-        .attach(Database::fairing())
-        .launch();
+    String::from(
+        &database_url[database_url.rfind("=").unwrap() + 1..database_url.rfind("}").unwrap() - 1],
+    )
 }

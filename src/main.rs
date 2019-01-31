@@ -10,28 +10,30 @@ extern crate diesel;
 extern crate diesel_migrations;
 extern crate chrono;
 
+mod api;
 mod auth;
 mod models;
 mod schema;
 
 use std::env;
 
-use rocket::http::{RawStr, Status};
-use rocket::request::{Form, FromFormValue};
 use rocket::response::Redirect;
 
 use dotenv::dotenv;
 
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use diesel::result::Error::DatabaseError;
 
 // use chrono::naive::NaiveDateTime;
+
+use api::admin::*;
+use api::link::*;
+use api::user::*;
 
 use models::*;
 
 #[get("/<url>")]
-fn index(conn: Database, url: String) -> Option<Redirect> {
+fn url_resolver(conn: Database, url: String) -> Option<Redirect> {
     use schema::links::dsl::*;
     let results = links
         .filter(origin.eq(url))
@@ -48,83 +50,12 @@ fn index(conn: Database, url: String) -> Option<Redirect> {
 }
 
 #[get("/")]
-fn introduction() -> &'static str {
+fn index() -> &'static str {
     "For help, please view https://github.com/edward-shen/linkr"
 }
 
-#[derive(FromForm)]
-struct CreateLink {
-    origin: URLText,
-    dest: String,
-}
-
-struct URLText(String);
-
-impl<'v> FromFormValue<'v> for URLText {
-    type Error = &'v RawStr;
-
-    fn from_form_value(form_value: &'v RawStr) -> Result<URLText, &'v RawStr> {
-        match form_value.parse::<String>() {
-            Ok(link) if is_valid_origin(&link) => Ok(URLText(link)),
-            _ => Err(form_value),
-        }
-    }
-}
-
-fn is_valid_origin(string: &String) -> bool {
-    if string.is_empty() {
-        return false;
-    };
-
-    for c in string.chars() {
-        if !c.is_ascii_alphanumeric() && c != '-' && c != '_' {
-            return false;
-        }
-    }
-
-    return true;
-}
-#[post("/api/link", data = "<link>")]
-fn new_link(conn: Database, link: Form<CreateLink>) -> Status {
-    use schema::links;
-
-    let new_link = NewLink {
-        origin: link.origin.0.clone(),
-        dest: link.dest.clone(),
-        owner: None,
-        expire_date: None,
-        expire_clicks: None,
-    };
-
-    match diesel::insert_into(links::table)
-        .values(&new_link)
-        .get_result::<Link>(&conn.0)
-    {
-        Ok(_) => Status::Created,
-        Err(DatabaseError(diesel::result::DatabaseErrorKind::UniqueViolation, _)) => {
-            Status::Conflict
-        }
-        Err(_) => Status::InternalServerError,
-    }
-}
-
-#[derive(FromForm)]
-struct DeleteLink {
-    origin: URLText,
-}
-
-#[delete("/api/link", data = "<link>")]
-fn delete_link(conn: Database, link: Form<DeleteLink>) -> Status {
-    use schema::links::dsl::*;
-
-    match diesel::delete(links.filter(origin.eq(&link.origin.0))).execute(&conn.0) {
-        Ok(_) => Status::Ok,
-        Err(_) => Status::InternalServerError,
-    }
-}
-
 #[database("linkrdb")]
-struct Database(PgConnection);
+pub struct Database(PgConnection);
 
 fn main() {
     dotenv().ok();
@@ -132,7 +63,10 @@ fn main() {
     run_migrations();
 
     rocket::ignite()
-        .mount("/", routes![introduction, index, new_link, delete_link])
+        .mount("/", routes![index, url_resolver])
+        .mount("/api/link/", routes![new_link, delete_link])
+        .mount("/api/user/", routes![login, create_user])
+        .mount("/api/admin/", routes![view_stats])
         // .register(catchers![not_found])
         .attach(Database::fairing())
         .launch();

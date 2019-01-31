@@ -97,6 +97,10 @@ impl<'v> FromFormValue<'v> for URLText {
 }
 
 fn is_valid_origin(string: &String) -> bool {
+    if string.is_empty() {
+        return false;
+    };
+
     for c in string.chars() {
         if !c.is_ascii_alphanumeric() && c != '-' && c != '_' {
             return false;

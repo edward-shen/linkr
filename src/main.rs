@@ -10,28 +10,30 @@ extern crate diesel;
 extern crate diesel_migrations;
 extern crate chrono;
 
+mod api;
 mod auth;
 mod models;
 mod schema;
 
 use std::env;
 
-use rocket::http::{RawStr, Status};
-use rocket::request::{Form, FromFormValue};
 use rocket::response::Redirect;
 
 use dotenv::dotenv;
 
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use diesel::result::Error::DatabaseError;
 
-use chrono::naive::NaiveDateTime;
+// use chrono::naive::NaiveDateTime;
+
+use api::admin::*;
+use api::link::*;
+use api::user::*;
 
 use models::*;
 
 #[get("/<url>")]
-fn index(conn: Database, url: String) -> Option<Redirect> {
+fn url_resolver(conn: Database, url: String) -> Option<Redirect> {
     use schema::links::dsl::*;
     let results = links
         .filter(origin.eq(url))
@@ -48,123 +50,39 @@ fn index(conn: Database, url: String) -> Option<Redirect> {
 }
 
 #[get("/")]
-fn introduction() -> &'static str {
-    r#"Hello! Welcome to linkr, a easy-to-use URL shortener and/or URL prettifier.
-
-To make a redirected URL via cURL...
-    ... from "your-domain.com/hello"
-    ... to "google.com"
-    ... where your password is "potato"
-
-    curl -XPOST -d "origin=hello&dest=https://google.com&password=potato" your-domain.com/api/link
-
-The server will respond with one of the following:
-    201 CREATED                 The link was successfully created.
-    401 UNAUTHORIZED            The password provided was incorrect.
-    409 CONFLICT                A link already exists on this domain.
-    500 INTERNAL SERVER ERROR   Something bad happened and you should file a bug report.
-
-To delete a URL via cURL...
-    ... from "you-domain.com/hello"
-    ... where your password is "potato"
-
-    curl -XDELETE -d "origin=hello&password=potato" your-domain/api/link
-
-The server will respond with one of the following:
-    200 OK                      The link, if it exists, was deleted.
-    401 UNAUTHORIZED            The password provided was incorrect.
-    500 INTERNAL SERVER ERROR   Please file a bug report.
-"#
-}
-
-#[derive(FromForm)]
-struct CreateLink {
-    origin: URLText,
-    dest: String,
-    password: String,
-}
-
-struct URLText(String);
-
-impl<'v> FromFormValue<'v> for URLText {
-    type Error = &'v RawStr;
-
-    fn from_form_value(form_value: &'v RawStr) -> Result<URLText, &'v RawStr> {
-        match form_value.parse::<String>() {
-            Ok(link) if is_valid_origin(&link) => Ok(URLText(link)),
-            _ => Err(form_value),
-        }
-    }
-}
-
-fn is_valid_origin(string: &String) -> bool {
-    for c in string.chars() {
-        if !c.is_ascii_alphanumeric() && c != '-' && c != '_' {
-            return false;
-        }
-    }
-
-    return true;
-}
-#[post("/api/link", data = "<link>")]
-fn new_link(conn: Database, link: Form<CreateLink>) -> Status {
-    use schema::links;
-
-    if link.password != env::var("LINKR_PASSWORD").unwrap() {
-        return Status::Unauthorized;
-    }
-
-    let new_link = NewLink {
-        origin: link.origin.0.clone(),
-        dest: link.dest.clone(),
-        owner: None,
-        expire_date: None,
-        expire_clicks: None,
-    };
-
-    match diesel::insert_into(links::table)
-        .values(&new_link)
-        .get_result::<Link>(&conn.0)
-    {
-        Ok(_) => Status::Created,
-        Err(DatabaseError(diesel::result::DatabaseErrorKind::UniqueViolation, _)) => {
-            Status::Conflict
-        }
-        Err(_) => Status::InternalServerError,
-    }
-}
-
-#[derive(FromForm)]
-struct DeleteLink {
-    origin: URLText,
-    password: String,
-}
-
-#[delete("/api/link", data = "<link>")]
-fn delete_link(conn: Database, link: Form<DeleteLink>) -> Status {
-    use schema::links::dsl::*;
-
-    if link.password != env::var("LINKR_PASSWORD").unwrap() {
-        return Status::Unauthorized;
-    }
-
-    match diesel::delete(links.filter(origin.eq(&link.origin.0))).execute(&conn.0) {
-        Ok(_) => Status::Ok,
-        Err(_) => Status::InternalServerError,
-    }
+fn index() -> &'static str {
+    "For help, please view https://github.com/edward-shen/linkr"
 }
 
 #[database("linkrdb")]
-struct Database(PgConnection);
+pub struct Database(PgConnection);
 
 fn main() {
     dotenv().ok();
 
-    env::var("LINKR_PASSWORD")
-        .expect("LINKR_PASSWORD env variable not found. Please put it in .env or declare it!");
+    run_migrations();
 
+    rocket::ignite()
+        .mount("/", routes![index, url_resolver])
+        .mount("/api/link/", routes![new_link, delete_link])
+        .mount("/api/user/", routes![login, create_user])
+        .mount("/api/admin/", routes![view_stats])
+        // .register(catchers![not_found])
+        .attach(Database::fairing())
+        .launch();
+}
+
+fn run_migrations() {
     embed_migrations!();
 
+    let database_url = parse_database_env();
+    let connection = PgConnection::establish(&database_url)
+        .expect(&format!("Could not connect to {}", database_url));
+
+    embedded_migrations::run(&connection).expect("Could not run migrations!");
+}
+
+fn parse_database_env() -> String {
     let database_url = env::var("ROCKET_DATABASES").expect("ROCKET_DATABASES must be set!");
     let database_url = database_url.as_str();
 
@@ -172,16 +90,7 @@ fn main() {
     // FIXME: make this less gross
     // Value of database_url is {linkrdb={url=postgres://linkr@localhost/linkrdb}}
     // but I have no idea what langauge it's in?
-    let database_url =
-        &database_url[database_url.rfind("=").unwrap() + 1..database_url.rfind("}").unwrap() - 1];
-    let connection = PgConnection::establish(&database_url)
-        .expect(&format!("Could not connect to {}", database_url));
-
-    embedded_migrations::run(&connection).expect("Could not run migrations!");
-
-    rocket::ignite()
-        .mount("/", routes![introduction, index, new_link, delete_link])
-        // .register(catchers![not_found])
-        .attach(Database::fairing())
-        .launch();
+    String::from(
+        &database_url[database_url.rfind("=").unwrap() + 1..database_url.rfind("}").unwrap() - 1],
+    )
 }

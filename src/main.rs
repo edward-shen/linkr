@@ -49,32 +49,7 @@ fn index(conn: Database, url: String) -> Option<Redirect> {
 
 #[get("/")]
 fn introduction() -> &'static str {
-    r#"Hello! Welcome to linkr, a easy-to-use URL shortener and/or URL prettifier.
-
-To make a redirected URL via cURL...
-    ... from "your-domain.com/hello"
-    ... to "google.com"
-    ... where your password is "potato"
-
-    curl -XPOST -d "origin=hello&dest=https://google.com&password=potato" your-domain.com/api/link
-
-The server will respond with one of the following:
-    201 CREATED                 The link was successfully created.
-    401 UNAUTHORIZED            The password provided was incorrect.
-    409 CONFLICT                A link already exists on this domain.
-    500 INTERNAL SERVER ERROR   Something bad happened and you should file a bug report.
-
-To delete a URL via cURL...
-    ... from "you-domain.com/hello"
-    ... where your password is "potato"
-
-    curl -XDELETE -d "origin=hello&password=potato" your-domain/api/link
-
-The server will respond with one of the following:
-    200 OK                      The link, if it exists, was deleted.
-    401 UNAUTHORIZED            The password provided was incorrect.
-    500 INTERNAL SERVER ERROR   Please file a bug report.
-"#
+    "For help, please view https://github.com/edward-shen/linkr"
 }
 
 #[derive(FromForm)]

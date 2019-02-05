@@ -1,3 +1,5 @@
+pub mod DefaultAuth;
+
 /// An identity provider must provide authentication for every end point
 pub trait IdentityProvider {
     /// Checks whether or not the user can log in and get a token-key pair
@@ -27,7 +29,6 @@ pub trait IdentityProvider {
 
     fn can_delete_tokens(token: String) -> bool;
 
-
     // Moderator tasks
     
     /// Checks whether or not the user can get all mappings
@@ -36,5 +37,4 @@ pub trait IdentityProvider {
     fn can_view_all_mapping_stats(token: String) -> bool;
 
     fn can_delete_others_mapping(token: String) -> bool;
-
 }

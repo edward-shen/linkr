@@ -1,4 +1,4 @@
-pub mod DefaultAuth;
+pub mod default_auth;
 
 /// An identity provider must provide authentication for every end point
 pub trait IdentityProvider {
@@ -22,15 +22,15 @@ pub trait IdentityProvider {
     // Administrative tasks
 
     fn can_toggle_anonymous_mode(token: String) -> bool;
-    
+
     fn can_toggle_registration(token: String) -> bool;
-    
+
     fn can_delete_users(token: String) -> bool;
 
     fn can_delete_tokens(token: String) -> bool;
 
     // Moderator tasks
-    
+
     /// Checks whether or not the user can get all mappings
     fn can_view_all_mappings(token: String) -> bool;
 

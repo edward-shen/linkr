@@ -16,6 +16,7 @@ pub struct CreateLink {
 
 struct URLText(String);
 
+/// Custom string validation for checking if the origin URL is valid.
 impl<'v> FromFormValue<'v> for URLText {
     type Error = &'v RawStr;
 
@@ -27,6 +28,12 @@ impl<'v> FromFormValue<'v> for URLText {
     }
 }
 
+/// Checks whether or not the user-provided string is a valid link. There are
+/// a few limits to a valid link:
+/// - The link must not be empty
+/// - The link can only consist of alphanumeric characters, hyphens, or dashes.
+/// - The following routes are forbidden:
+///     - /api
 fn is_valid_origin(string: &String) -> bool {
     if string.is_empty() {
         return false;
@@ -36,6 +43,10 @@ fn is_valid_origin(string: &String) -> bool {
         if !c.is_ascii_alphanumeric() && c != '-' && c != '_' {
             return false;
         }
+    }
+
+    if string == "api" {
+        return false;
     }
 
     return true;

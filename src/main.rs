@@ -16,6 +16,7 @@ mod models;
 mod schema;
 
 use std::env;
+use std::error::Error;
 
 use rocket::response::Redirect;
 
@@ -50,6 +51,7 @@ fn main() {
         .launch();
 }
 
+/// Automated DB migration, to allow an easy-to-install binary.
 fn run_migrations() {
     embed_migrations!();
 
@@ -58,7 +60,10 @@ fn run_migrations() {
 
 pub fn get_db_connection() -> diesel::PgConnection {
     let database_url = parse_database_env();
-    PgConnection::establish(&database_url).expect(&format!("Could not connect to {}", database_url))
+    match PgConnection::establish(&database_url) {
+        Ok(conn) => conn,
+        Err(e) => panic!(format!("\n{}", e.description())),
+    }
 }
 
 fn parse_database_env() -> String {

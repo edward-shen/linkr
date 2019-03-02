@@ -98,5 +98,5 @@ fn url_resolver(conn: Database, url: String) -> Option<Redirect> {
 
 #[get("/")]
 fn index() -> &'static str {
-    "For help, please view https://github.com/edward-shen/linkr"
+    "For help, please view https://github.com/edward-shen/linkr\n"
 }

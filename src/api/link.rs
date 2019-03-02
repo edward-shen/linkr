@@ -1,4 +1,5 @@
 use diesel::prelude::*;
+use diesel::result::DatabaseErrorKind::UniqueViolation;
 use diesel::result::Error::DatabaseError;
 
 use rocket::http::{RawStr, Status};
@@ -10,7 +11,9 @@ use crate::Database;
 
 #[derive(FromForm)]
 pub struct CreateLink {
+    /// This should be a path relative to the root, excluding leading slashes.
     origin: URLText,
+    /// This must be a fully resolved link, including protocol.
     dest: String,
 }
 
@@ -69,9 +72,7 @@ pub fn new_link(conn: Database, link: Form<CreateLink>) -> Status {
         .get_result::<Link>(&conn.0)
     {
         Ok(_) => Status::Created,
-        Err(DatabaseError(diesel::result::DatabaseErrorKind::UniqueViolation, _)) => {
-            Status::Conflict
-        }
+        Err(DatabaseError(UniqueViolation, _)) => Status::Conflict,
         Err(_) => Status::InternalServerError,
     }
 }

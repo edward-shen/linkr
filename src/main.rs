@@ -100,3 +100,42 @@ fn url_resolver(conn: Database, url: String) -> Option<Redirect> {
 fn index() -> &'static str {
     "For help, please view https://github.com/edward-shen/linkr\n"
 }
+
+#[cfg(test)]
+mod init_test {
+    mod parse_env {
+        use super::super::*;
+
+        #[test]
+        fn standard_input() {
+            env::set_var(
+                "ROCKET_DATABASES",
+                "{linkrdb={url=postgres://linkr@localhost/linkrdb}}",
+            );
+            assert_eq!("postgres://linkr@localhost/linkrdb", parse_database_env());
+        }
+
+        #[test]
+        #[should_panic]
+        fn empty_input() {
+            env::remove_var("ROCKET_DATABASES");
+            parse_database_env();
+        }
+
+        #[test]
+        fn invalid_input_but_parses() {
+            env::set_var(
+                "ROCKET_DATABASES",
+                "{linkrdb====postgres://linkr@localhost/linkrdb}24gafsdgdsdgafd",
+            );
+            assert_eq!("postgres://linkr@localhost/linkrd", parse_database_env());
+        }
+
+        #[test]
+        #[should_panic]
+        fn invalid_input() {
+            env::set_var("ROCKET_DATABASES", "postgres://linkr@localhost/linkrdb");
+            parse_database_env();
+        }
+    }
+}

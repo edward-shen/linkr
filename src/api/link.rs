@@ -1,6 +1,9 @@
+use crate::auth::IdP;
+use crate::auth::IdentityProvider;
 use diesel::prelude::*;
 use diesel::result::DatabaseErrorKind::UniqueViolation;
 use diesel::result::Error::DatabaseError;
+use rocket::State;
 
 use rocket::http::{RawStr, Status};
 use rocket::request::{Form, FromFormValue};
@@ -56,8 +59,10 @@ fn is_valid_origin(string: &String) -> bool {
 }
 
 #[post("/", data = "<link>")]
-pub fn new_link(conn: Database, link: Form<CreateLink>) -> Status {
+pub fn new_link(conn: Database, link: Form<CreateLink>, idp: State<IdP>) -> Status {
     use schema::links;
+
+    idp.provider.can_create_mapping(String::from("asdf"));
 
     let new_link = NewLink {
         origin: link.origin.0.clone(),

@@ -47,6 +47,9 @@ fn main() {
         .mount("/api/user/", routes![login, create_user])
         .mount("/api/admin/", routes![view_stats])
         // .register(catchers![not_found])
+        .manage(auth::IdP {
+            provider: &auth::no_auth::Provider {},
+        })
         .attach(Database::fairing())
         .launch();
 }

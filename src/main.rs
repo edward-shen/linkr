@@ -75,7 +75,7 @@ macro_rules! start {
             .mount("/", routes![index, url_resolver])
             .mount("/api/link/", routes![new_link, delete_link])
             .mount("/api/user/", routes![login, create_user])
-            .mount("/api/admin/", routes![view_stats])
+            .mount("/api/admin/", routes![view_stats, view_stats_all])
             // .register(catchers![not_found])
             .manage(IDP_PROVIDER.as_ref().unwrap())
             .attach(Database::fairing())

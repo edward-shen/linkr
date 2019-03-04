@@ -172,7 +172,7 @@ mod utils {
             assert_eq!(
                 Some(Status::Unauthorized),
                 validate_psk(String::new(), String::new(), None, 0)
-            ); 
+            );
         }
 
         #[test]

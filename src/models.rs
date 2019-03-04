@@ -1,6 +1,7 @@
 use crate::schema::links;
 use crate::schema::token_key_map;
 use chrono::naive::NaiveDateTime;
+use serde::Serialize;
 
 #[derive(Queryable)]
 pub struct TokenKeyMap {
@@ -16,7 +17,7 @@ pub struct NewTokenKeyMap {
     pub key: String,
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Serialize)]
 pub struct Link {
     pub id: i32,
     pub owner: Option<String>,

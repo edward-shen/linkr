@@ -21,7 +21,7 @@ pub struct CreateLink {
     origin: URLText,
     /// This must be a fully resolved link, including protocol.
     dest: String,
-    ts: u64,
+    ts: Option<u64>,
     key: Option<String>,
     hash: Option<String>,
 }
@@ -47,11 +47,7 @@ impl<'v> FromFormValue<'v> for URLText {
 /// - The following routes are forbidden:
 ///     - /api
 fn is_valid_origin(string: &String) -> bool {
-    if string.is_empty() {
-        return false;
-    };
-
-    if string == "api" {
+    if string.is_empty() || string == "api" {
         return false;
     }
 
@@ -78,27 +74,17 @@ pub fn new_link(conn: Database, link: Form<CreateLink>, idp: State<&IdP>) -> Sta
 
     // Require key if IdP has symmetric key
     if let Some(key) = idp.provider.get_key() {
-        if link.hash.is_none() {
-            println!("No hash found");
-            return Status::NotAcceptable;
-        }
-
-        if !verify_hash(
+        let ts = link.ts.unwrap_or_default();
+        let result = handle_psk(
             key,
-            format!("origin={}&dest={}&ts={}", link.origin.0, link.dest, link.ts),
-            link.hash.clone().unwrap(),
-        ) {}
+            format!("origin={}&dest={}&ts={}", link.origin.0, link.dest, ts),
+            link.hash.clone(),
+            ts,
+        );
 
-        // Check timestamp
-        let cur_time = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
-            Ok(n) => n.as_secs(),
-            Err(_) => panic!("Could not get system time!"),
-        };
-
-        // If cur_time - link.ts < 0, the value will underflow; therefore no need to check.
-        if cur_time - link.ts > 5 {
-            println!("Time too different");
-            return Status::NotAcceptable;
+        match result {
+            Some(error) => return error,
+            None => (),
         }
     }
 
@@ -123,21 +109,63 @@ pub fn new_link(conn: Database, link: Form<CreateLink>, idp: State<&IdP>) -> Sta
 #[derive(FromForm)]
 pub struct DeleteLink {
     origin: URLText,
-    token: Option<String>,
+    key: Option<String>,
+    hash: Option<String>,
+    ts: Option<u64>,
 }
 
 #[delete("/", data = "<link>")]
 pub fn delete_link(conn: Database, link: Form<DeleteLink>, idp: State<&IdP>) -> Status {
     use schema::links::dsl::*;
-    if !idp
-        .provider
-        .can_delete_own_mapping(link.token.clone().unwrap_or_default())
+    if !idp.provider.get_key().is_some()
+        && !idp
+            .provider
+            .can_delete_own_mapping(link.key.clone().unwrap_or_default())
     {
         return Status::Unauthorized;
+    }
+
+    // Require key if IdP has symmetric key
+    if let Some(key) = idp.provider.get_key() {
+        let ts = link.ts.unwrap_or_default();
+        let result = handle_psk(
+            key,
+            format!("origin={}&ts={}", link.origin.0, ts),
+            link.hash.clone(),
+            ts,
+        );
+
+        match result {
+            Some(error) => return error,
+            None => (),
+        }
     }
 
     match diesel::delete(links.filter(origin.eq(&link.origin.0))).execute(&conn.0) {
         Ok(_) => Status::Ok,
         Err(_) => Status::InternalServerError,
     }
+}
+
+fn handle_psk(key: String, value: String, hash: Option<String>, ts: u64) -> Option<Status> {
+    if hash.is_none() {
+        return Some(Status::Unauthorized);
+    }
+
+    if !verify_hash(key, value, hash.clone().unwrap()) {
+        return Some(Status::BadRequest);
+    }
+
+    // Check timestamp
+    let cur_time = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+        Ok(n) => n.as_secs(),
+        Err(_) => panic!("Could not get system time!"),
+    };
+
+    // If cur_time - link.ts < 0, the value will underflow; therefore no need to check.
+    if cur_time - ts > 5 {
+        return Some(Status::new(425, "Too Early"));
+    }
+
+    None
 }

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+# PSK test for creating links
+
+# USAGE: ./create_link origin destination key
+
+function hash_hmac {
+  digest="$1"
+  data="$2"
+  key="$3"
+  shift 3
+  echo -n "$data" | openssl sha256 -hmac "$key" | sed 's/^.* //'
+}
+
+to_hash="origin=$1&ts=$(date +%s)"
+result="$to_hash&hash=$(hash_hmac "sha256" $to_hash "$2")"
+echo $result
+curl -XDELETE -d $result localhost:8000/api/link

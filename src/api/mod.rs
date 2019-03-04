@@ -7,6 +7,7 @@ pub mod admin;
 pub mod link;
 pub mod user;
 
+/// Verifies a key and value matches a HMAC SHA256 hash represented as a hexstring.
 fn verify_hash(key: String, value: String, hash: String) -> bool {
     let mut mac = Hmac::<Sha256>::new_varkey(key.as_bytes()).unwrap();
     mac.input(value.as_bytes());
@@ -16,6 +17,9 @@ fn verify_hash(key: String, value: String, hash: String) -> bool {
     mac.verify(&hash).is_ok()
 }
 
+/// Tries to convert a hex string into a hex array. Excepts a string of even length
+/// of at least size 1, and panics otherwise. If it fails to parse, e.g. some
+/// hex value is invalid, returns a ParseIntError instead.
 fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
     (0..s.len())
         .step_by(2)

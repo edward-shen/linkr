@@ -31,14 +31,16 @@ use diesel::prelude::*;
 
 // use chrono::naive::NaiveDateTime;
 
+use auth::AuthMethod;
+
 use models::*;
 
 #[database("linkrdb")]
 pub struct Database(PgConnection);
 
 static mut IDP_PROVIDER: Option<auth::IdP> = None;
+static mut AUTH_METHOD: Option<AuthMethod> = None;
 
-#[allow(unused)] // This is used, just only in conditional branches so RLS doesn't see it
 macro_rules! start {
     () => {
         /**
@@ -68,6 +70,7 @@ macro_rules! start {
         unsafe {
             IDP_PROVIDER = Some(auth::IdP {
                 provider: &*PROVIDER,
+                auth_method: &AUTH_METHOD.as_ref().unwrap(),
             });
 
             rocket::ignite()
@@ -88,24 +91,30 @@ fn main() {
 
     run_migrations();
 
-    let auth_method = env::var("AUTH_METHOD").expect("AUTH_METHOD must be set!");
+    unsafe {
+        AUTH_METHOD = Some(AuthMethod::get_type(
+            &env::var("AUTH_METHOD").expect("AUTH_METHOD must be set!"),
+        ));
 
-    match &*auth_method {
-        "no_auth" => {
-            lazy_static! {
-                static ref PROVIDER: auth::no_auth::Provider = auth::no_auth::Provider {};
+        match AUTH_METHOD {
+            Some(AuthMethod::NoAuth) => {
+                lazy_static! {
+                    static ref PROVIDER: auth::no_auth::Provider = auth::no_auth::Provider {};
+                }
+                start!();
             }
-            start!();
-        }
-        "preshared_key" => {
-            lazy_static! {
-                static ref TOKEN: String = env::var("PRESHARED_TOKEN").unwrap();
-                static ref PROVIDER: auth::preshared_key::Provider =
-                    auth::preshared_key::Provider { key: TOKEN.clone() };
+
+            Some(AuthMethod::PSK) => {
+                lazy_static! {
+                    static ref TOKEN: String = env::var("PRESHARED_TOKEN").unwrap();
+                    static ref PROVIDER: auth::preshared_key::Provider =
+                        auth::preshared_key::Provider { key: TOKEN.clone() };
+                }
+                start!();
             }
-            start!();
+
+            None => panic!("Auth method not set"),
         }
-        _ => println!("Unsupported authentication method!"),
     }
 }
 

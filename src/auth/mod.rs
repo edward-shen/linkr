@@ -3,6 +3,7 @@ pub mod preshared_key;
 
 pub struct IdP<'a> {
     pub provider: &'a IdentityProvider,
+    pub auth_method: &'a AuthMethod,
 }
 
 unsafe impl Send for IdP<'_> {}
@@ -48,4 +49,26 @@ pub trait IdentityProvider {
 
     // Meta required fields
     fn get_key(&self) -> Option<String>;
+}
+
+pub enum AuthMethod {
+    NoAuth,
+    PSK,
+}
+
+impl AuthMethod {
+    pub fn get_type(s: &str) -> AuthMethod {
+        match s {
+            "no_auth" => AuthMethod::NoAuth,
+            "preshared_key" => AuthMethod::PSK,
+            _ => panic!("Unknown auth method!"),
+        }
+    }
+
+    pub fn to_string(s: &AuthMethod) -> &'static str {
+        match s {
+            AuthMethod::NoAuth => "no_auth",
+            AuthMethod::PSK => "preshared_key",
+        }
+    }
 }

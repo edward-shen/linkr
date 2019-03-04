@@ -8,6 +8,7 @@ use diesel::prelude::*;
 use diesel::result::DatabaseErrorKind::UniqueViolation;
 use diesel::result::Error::DatabaseError;
 
+use crate::auth::AuthMethod;
 use crate::auth::IdP;
 use crate::models::*;
 use crate::schema;
@@ -22,7 +23,6 @@ pub struct CreateLink {
     /// This must be a fully resolved link, including protocol.
     dest: String,
     ts: Option<u64>,
-    key: Option<String>,
     hash: Option<String>,
 }
 
@@ -64,27 +64,23 @@ fn is_valid_origin(string: &String) -> bool {
 pub fn new_link(conn: Database, link: Form<CreateLink>, idp: State<&IdP>) -> Status {
     use schema::links;
 
-    if !idp.provider.get_key().is_some()
-        && !idp
-            .provider
-            .can_create_mapping(link.key.clone().unwrap_or_default())
-    {
-        return Status::Unauthorized;
-    }
+    match idp.auth_method {
+        AuthMethod::NoAuth => (),
+        AuthMethod::PSK => {
+            if let Some(key) = idp.provider.get_key() {
+                let ts = link.ts.unwrap_or_default();
+                let result = validate_psk(
+                    key,
+                    format!("origin={}&dest={}&ts={}", link.origin.0, link.dest, ts),
+                    link.hash.clone(),
+                    ts,
+                );
 
-    // Require key if IdP has symmetric key
-    if let Some(key) = idp.provider.get_key() {
-        let ts = link.ts.unwrap_or_default();
-        let result = handle_psk(
-            key,
-            format!("origin={}&dest={}&ts={}", link.origin.0, link.dest, ts),
-            link.hash.clone(),
-            ts,
-        );
-
-        match result {
-            Some(error) => return error,
-            None => (),
+                match result {
+                    Some(error) => return error,
+                    None => (),
+                }
+            }
         }
     }
 
@@ -109,7 +105,6 @@ pub fn new_link(conn: Database, link: Form<CreateLink>, idp: State<&IdP>) -> Sta
 #[derive(FromForm)]
 pub struct DeleteLink {
     origin: URLText,
-    key: Option<String>,
     hash: Option<String>,
     ts: Option<u64>,
 }
@@ -117,27 +112,24 @@ pub struct DeleteLink {
 #[delete("/", data = "<link>")]
 pub fn delete_link(conn: Database, link: Form<DeleteLink>, idp: State<&IdP>) -> Status {
     use schema::links::dsl::*;
-    if !idp.provider.get_key().is_some()
-        && !idp
-            .provider
-            .can_delete_own_mapping(link.key.clone().unwrap_or_default())
-    {
-        return Status::Unauthorized;
-    }
 
-    // Require key if IdP has symmetric key
-    if let Some(key) = idp.provider.get_key() {
-        let ts = link.ts.unwrap_or_default();
-        let result = handle_psk(
-            key,
-            format!("origin={}&ts={}", link.origin.0, ts),
-            link.hash.clone(),
-            ts,
-        );
+    match idp.auth_method {
+        AuthMethod::NoAuth => (),
+        AuthMethod::PSK => {
+            if let Some(key) = idp.provider.get_key() {
+                let ts = link.ts.unwrap_or_default();
+                let result = validate_psk(
+                    key,
+                    format!("origin={}&ts={}", link.origin.0, ts),
+                    link.hash.clone(),
+                    ts,
+                );
 
-        match result {
-            Some(error) => return error,
-            None => (),
+                match result {
+                    Some(error) => return error,
+                    None => (),
+                }
+            }
         }
     }
 
@@ -147,7 +139,7 @@ pub fn delete_link(conn: Database, link: Form<DeleteLink>, idp: State<&IdP>) -> 
     }
 }
 
-fn handle_psk(key: String, value: String, hash: Option<String>, ts: u64) -> Option<Status> {
+fn validate_psk(key: String, value: String, hash: Option<String>, ts: u64) -> Option<Status> {
     if hash.is_none() {
         return Some(Status::Unauthorized);
     }

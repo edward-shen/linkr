@@ -45,4 +45,7 @@ pub trait IdentityProvider {
     fn can_view_all_mapping_stats(&self, token: String) -> bool;
 
     fn can_delete_others_mapping(&self, token: String) -> bool;
+
+    // Meta required fields
+    fn get_key(&self) -> Option<String>;
 }

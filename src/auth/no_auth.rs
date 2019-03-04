@@ -69,4 +69,10 @@ impl IdentityProvider for Provider {
     fn can_delete_others_mapping(&self, _token: String) -> bool {
         true
     }
+
+    // Meta
+
+    fn get_key(&self) -> Option<String> {
+        None
+    }
 }

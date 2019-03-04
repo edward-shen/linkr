@@ -11,6 +11,8 @@ extern crate diesel_migrations;
 #[macro_use]
 extern crate lazy_static;
 extern crate chrono;
+extern crate hmac;
+extern crate sha2;
 
 mod api;
 mod auth;

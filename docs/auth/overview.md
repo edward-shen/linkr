@@ -10,8 +10,7 @@ Below are all available IdPs:
 | Identity Provider | Description
 | ----------------- | --- 
 | [`no_auth`](auth/no-auth.md) | Allow all API calls without any form of authentication or authorization. Not recommended except in private or testing settings.
-| [`preshared_key`](auth/preshared_key.md) | Use a preshared key to create tokens. Tokens then are used to authenticate and authorize API calls. Easiest semi-secure method for single-users looking to have individual tokens for each application.
-
+| [`preshared_key`](auth/preshared_key.md) | Use a preshared key and a timestamp to authorize and authenticate requests. Recommended for small and fast setups.
 
 Here are some planned IdPs:
 

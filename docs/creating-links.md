@@ -22,10 +22,14 @@ The server will respond with one of the following:
 | HTTP Code | Status                  | Meaning
 | --------: | ----------------------- | ---
 |       201 | CREATED                 | The link was successfully created.
-|       401 | UNAUTHORIZED            | The password provided was incorrect.
+|       400 | BAD REQUEST             | The hash failed to validate, or some other generic error.
+|       401 | UNAUTHORIZED            | A hash must be provided for this endpoint.
 |       422 | UNPROCESSABLE ENTITY    | You are missing a field, or a field failed a certain constraint.
+|       425 | TOO EARLY               | The timestamp was in the future or exceeded 5 seconds.
 |       409 | CONFLICT                | A link already exists on this domain.
 |       500 | INTERNAL SERVER ERROR   | Something bad happened and you should file a bug report.
+
+Depending on authentication mode, the server may never send a specific error code.
 
 There are some limitations:
  - all characters of `origin` are either alphanumeric, "-", or "_" and cannot be "api".

@@ -20,5 +20,9 @@ The server will respond with one of the following:
 | HTTP Code | Status                 | Meaning
 | --------: | ---------------------- | ---
 |       200 | OK                     | The link, if it exists, was deleted.
-|       401 | UNAUTHORIZED           | The password provided was incorrect.
+|       400 | BAD REQUEST            | The hash failed to validate, or some other generic error.
+|       401 | UNAUTHORIZED           | A hash must be provided for this endpoint.
+|       425 | TOO EARLY              | The timestamp was in the future or exceeded 5 seconds.
 |       500 | INTERNAL SERVER ERROR  | Please file a bug report.
+
+Depending on authentication mode, the server may never send a specific error code.

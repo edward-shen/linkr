@@ -8,6 +8,8 @@ extern crate rocket_contrib;
 extern crate diesel;
 #[macro_use]
 extern crate diesel_migrations;
+#[macro_use]
+extern crate lazy_static;
 extern crate chrono;
 
 mod api;
@@ -36,22 +38,36 @@ use models::*;
 #[database("linkrdb")]
 pub struct Database(PgConnection);
 
+static mut IDP_PROVIDER: Option<auth::IdP> = None;
+
 fn main() {
     dotenv().ok();
 
     run_migrations();
 
-    rocket::ignite()
-        .mount("/", routes![index, url_resolver])
-        .mount("/api/link/", routes![new_link, delete_link])
-        .mount("/api/user/", routes![login, create_user])
-        .mount("/api/admin/", routes![view_stats])
-        // .register(catchers![not_found])
-        .manage(auth::IdP {
-            provider: &auth::no_auth::Provider {},
-        })
-        .attach(Database::fairing())
-        .launch();
+    lazy_static! {
+        static ref env_var: String = env::var("ROCKET_DATABASES").unwrap();
+        static ref provider: auth::single_user::Provider = auth::single_user::Provider {
+            key: env_var.clone()
+        };
+    }
+
+    // TODO: Analyze safety
+    unsafe {
+        IDP_PROVIDER = Some(auth::IdP {
+            provider: &*provider,
+        });
+
+        rocket::ignite()
+            .mount("/", routes![index, url_resolver])
+            .mount("/api/link/", routes![new_link, delete_link])
+            .mount("/api/user/", routes![login, create_user])
+            .mount("/api/admin/", routes![view_stats])
+            // .register(catchers![not_found])
+            .manage(IDP_PROVIDER.as_ref().unwrap())
+            .attach(Database::fairing())
+            .launch();
+    }
 }
 
 /// Automated DB migration, to allow an easy-to-install binary.

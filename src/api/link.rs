@@ -59,7 +59,7 @@ fn is_valid_origin(string: &String) -> bool {
 }
 
 #[post("/", data = "<link>")]
-pub fn new_link(conn: Database, link: Form<CreateLink>, idp: State<IdP>) -> Status {
+pub fn new_link(conn: Database, link: Form<CreateLink>, idp: State<&IdP>) -> Status {
     use schema::links;
 
     idp.provider.can_create_mapping(String::from("asdf"));

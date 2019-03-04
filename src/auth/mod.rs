@@ -1,5 +1,5 @@
 pub mod no_auth;
-pub mod single_user;
+pub mod preshared_key;
 
 pub struct IdP<'a> {
     pub provider: &'a IdentityProvider,

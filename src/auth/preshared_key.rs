@@ -18,7 +18,6 @@ impl IdentityProvider for Provider {
     // Basic, core functionality.
 
     fn can_create_mapping(&self, token: String) -> bool {
-        print!("henmlpo");
         token == self.key
     }
 

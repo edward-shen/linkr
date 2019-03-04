@@ -95,11 +95,11 @@ fn main() {
             }
             start!();
         }
-        "single_user" => {
+        "preshared_key" => {
             lazy_static! {
                 static ref TOKEN: String = env::var("PRESHARED_TOKEN").unwrap();
-                static ref PROVIDER: auth::single_user::Provider =
-                    auth::single_user::Provider { key: TOKEN.clone() };
+                static ref PROVIDER: auth::preshared_key::Provider =
+                    auth::preshared_key::Provider { key: TOKEN.clone() };
             }
             start!();
         }

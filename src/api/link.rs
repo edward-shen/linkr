@@ -1,5 +1,4 @@
 use crate::auth::IdP;
-use crate::auth::IdentityProvider;
 use diesel::prelude::*;
 use diesel::result::DatabaseErrorKind::UniqueViolation;
 use diesel::result::Error::DatabaseError;
@@ -46,14 +45,14 @@ fn is_valid_origin(string: &String) -> bool {
         return false;
     };
 
+    if string == "api" {
+        return false;
+    }
+
     for c in string.chars() {
         if !c.is_ascii_alphanumeric() && c != '-' && c != '_' {
             return false;
         }
-    }
-
-    if string == "api" {
-        return false;
     }
 
     return true;
@@ -65,7 +64,7 @@ pub fn new_link(conn: Database, link: Form<CreateLink>, idp: State<&IdP>) -> Sta
 
     if !idp
         .provider
-        .can_create_mapping(link.token.clone().unwrap_or_else(|| String::new()))
+        .can_create_mapping(link.token.clone().unwrap_or_default())
     {
         return Status::Unauthorized;
     }
@@ -91,11 +90,18 @@ pub fn new_link(conn: Database, link: Form<CreateLink>, idp: State<&IdP>) -> Sta
 #[derive(FromForm)]
 pub struct DeleteLink {
     origin: URLText,
+    token: Option<String>,
 }
 
 #[delete("/", data = "<link>")]
-pub fn delete_link(conn: Database, link: Form<DeleteLink>) -> Status {
+pub fn delete_link(conn: Database, link: Form<DeleteLink>, idp: State<&IdP>) -> Status {
     use schema::links::dsl::*;
+    if !idp
+        .provider
+        .can_delete_own_mapping(link.token.clone().unwrap_or_default())
+    {
+        return Status::Unauthorized;
+    }
 
     match diesel::delete(links.filter(origin.eq(&link.origin.0))).execute(&conn.0) {
         Ok(_) => Status::Ok,

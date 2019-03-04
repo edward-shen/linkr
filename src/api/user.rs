@@ -2,7 +2,7 @@ use rocket::request::{Form, FromFormValue};
 
 #[derive(FromForm)]
 pub struct Login {
-    username: String,
+    username: Option<String>,
     password: String,
 }
 

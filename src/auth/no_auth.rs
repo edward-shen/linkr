@@ -14,7 +14,6 @@ impl IdentityProvider for Provider {
     // Basic, core functionality.
 
     fn can_create_mapping(&self, _token: String) -> bool {
-        print!("Hello from no_auth");
         true
     }
 

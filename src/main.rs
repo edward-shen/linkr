@@ -66,23 +66,20 @@ macro_rules! start {
         use api::link::*;
         use api::user::*;
 
-        // Safe, we are single-threaded at this point.
-        unsafe {
-            IDP_PROVIDER = Some(auth::IdP {
-                provider: &*PROVIDER,
-                auth_method: &AUTH_METHOD.as_ref().unwrap(),
-            });
+        IDP_PROVIDER = Some(auth::IdP {
+            provider: &*PROVIDER,
+            auth_method: &AUTH_METHOD.as_ref().unwrap(),
+        });
 
-            rocket::ignite()
-                .mount("/", routes![index, url_resolver])
-                .mount("/api/link/", routes![new_link, delete_link])
-                .mount("/api/user/", routes![login, create_user])
-                .mount("/api/admin/", routes![view_stats])
-                // .register(catchers![not_found])
-                .manage(IDP_PROVIDER.as_ref().unwrap())
-                .attach(Database::fairing())
-                .launch();
-        }
+        rocket::ignite()
+            .mount("/", routes![index, url_resolver])
+            .mount("/api/link/", routes![new_link, delete_link])
+            .mount("/api/user/", routes![login, create_user])
+            .mount("/api/admin/", routes![view_stats])
+            // .register(catchers![not_found])
+            .manage(IDP_PROVIDER.as_ref().unwrap())
+            .attach(Database::fairing())
+            .launch();
     };
 }
 

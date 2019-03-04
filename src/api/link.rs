@@ -161,3 +161,46 @@ fn validate_psk(key: String, value: String, hash: Option<String>, ts: u64) -> Op
 
     None
 }
+
+#[cfg(test)]
+mod utils {
+    mod validate_psk {
+        use super::super::*;
+
+        #[test]
+        fn no_hash_provided() {
+            assert_eq!(
+                Some(Status::Unauthorized),
+                validate_psk(String::new(), String::new(), None, 0)
+            ); 
+        }
+
+        #[test]
+        fn invalid_timestamp() {
+            assert_eq!(
+                Some(Status::new(425, "Too Early")),
+                validate_psk(
+                    String::from("henlo world"),
+                    String::from("origin=asdff&dest=hosd&ts=1551681791"),
+                    Some(String::from(
+                        "a84ee951112f89feaa34fe32d052c17187edbc2fb7ec35dfe710d06b5b17ad05"
+                    )),
+                    1551681791
+                )
+            );
+        }
+
+        #[test]
+        fn bad_hash() {
+            assert_eq!(
+                Some(Status::BadRequest),
+                validate_psk(
+                    String::from("henlo world"),
+                    String::from("origin=asdff&dest=hosd&ts=1551681791"),
+                    Some(String::new()),
+                    1551681791
+                )
+            );
+        }
+    }
+}

@@ -62,6 +62,7 @@ macro_rules! start {
         use api::link::*;
         use api::user::*;
 
+        // Safe, we are single-threaded at this point.
         unsafe {
             IDP_PROVIDER = Some(auth::IdP {
                 provider: &*PROVIDER,

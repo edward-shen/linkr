@@ -18,6 +18,7 @@ pub struct CreateLink {
     origin: URLText,
     /// This must be a fully resolved link, including protocol.
     dest: String,
+    token: Option<String>,
 }
 
 struct URLText(String);
@@ -62,7 +63,12 @@ fn is_valid_origin(string: &String) -> bool {
 pub fn new_link(conn: Database, link: Form<CreateLink>, idp: State<&IdP>) -> Status {
     use schema::links;
 
-    idp.provider.can_create_mapping(String::from("asdf"));
+    if !idp
+        .provider
+        .can_create_mapping(link.token.clone().unwrap_or_else(|| String::new()))
+    {
+        return Status::Unauthorized;
+    }
 
     let new_link = NewLink {
         origin: link.origin.0.clone(),

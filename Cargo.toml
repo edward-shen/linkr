@@ -10,6 +10,10 @@ repository = "https://github.com/edward-shen/linkr"
 readme = "readme.md"
 license = "AGPL-3.0-or-later"
 
+[features]
+no_auth = []
+single_user = []
+
 [dependencies]
 rocket = "0.4.0"
 diesel = { version = "1.0.0", features = ["postgres", "chrono"] }

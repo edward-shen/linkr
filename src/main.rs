@@ -29,10 +29,6 @@ use diesel::prelude::*;
 
 // use chrono::naive::NaiveDateTime;
 
-use api::admin::*;
-use api::link::*;
-use api::user::*;
-
 use models::*;
 
 #[database("linkrdb")]
@@ -40,34 +36,56 @@ pub struct Database(PgConnection);
 
 static mut IDP_PROVIDER: Option<auth::IdP> = None;
 
+#[allow(unused)] // This is used, just only in conditional branches so RLS doesn't see it
+macro_rules! start {
+    () => {
+        use api::admin::*;
+        use api::link::*;
+        use api::user::*;
+
+        unsafe {
+            IDP_PROVIDER = Some(auth::IdP {
+                provider: &*PROVIDER,
+            });
+
+            rocket::ignite()
+                .mount("/", routes![index, url_resolver])
+                .mount("/api/link/", routes![new_link, delete_link])
+                .mount("/api/user/", routes![login, create_user])
+                .mount("/api/admin/", routes![view_stats])
+                // .register(catchers![not_found])
+                .manage(IDP_PROVIDER.as_ref().unwrap())
+                .attach(Database::fairing())
+                .launch();
+        }
+    };
+}
+
 fn main() {
     dotenv().ok();
 
     run_migrations();
 
-    lazy_static! {
-        static ref env_var: String = env::var("ROCKET_DATABASES").unwrap();
-        static ref provider: auth::single_user::Provider = auth::single_user::Provider {
-            key: env_var.clone()
-        };
+    #[cfg(feature = "no_auth")]
+    {
+        lazy_static! {
+            static ref PROVIDER: auth::no_auth::Provider = auth::no_auth::Provider {};
+        }
+        start!();
+    }
+
+    #[cfg(feature = "single_user")]
+    {
+        lazy_static! {
+            static ref env_var: String = env::var("PRESHARED_TOKEN").unwrap();
+            static ref PROVIDER: auth::single_user::Provider = auth::single_user::Provider {
+                key: env_var.clone()
+            };
+        }
+        start!();
     }
 
     // TODO: Analyze safety
-    unsafe {
-        IDP_PROVIDER = Some(auth::IdP {
-            provider: &*provider,
-        });
-
-        rocket::ignite()
-            .mount("/", routes![index, url_resolver])
-            .mount("/api/link/", routes![new_link, delete_link])
-            .mount("/api/user/", routes![login, create_user])
-            .mount("/api/admin/", routes![view_stats])
-            // .register(catchers![not_found])
-            .manage(IDP_PROVIDER.as_ref().unwrap())
-            .attach(Database::fairing())
-            .launch();
-    }
 }
 
 /// Automated DB migration, to allow an easy-to-install binary.

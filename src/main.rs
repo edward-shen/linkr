@@ -39,6 +39,25 @@ static mut IDP_PROVIDER: Option<auth::IdP> = None;
 #[allow(unused)] // This is used, just only in conditional branches so RLS doesn't see it
 macro_rules! start {
     () => {
+        /**
+         * A macro is needed because of the interactions between lazy_static and
+         * the rust compiler.
+         *
+         * It's better to explain the reasoning as a story if anything:
+         *
+         * PROVIDER isn't defined when no feature is enabled, so it fails to
+         * compile. We could define a dummy PROVIDER variable, but then
+         * lazy_static complains because there's a duplicate definition of
+         * PROVIDER, since it does some shenanigans and need unique variable names.
+         *
+         * Thus, the next reasonable step is to try and turn this into a
+         * function. The issue then arises with how to type the provider as a
+         * parameter. Simply put, you can't, because lazy_static dynamically
+         * generates a type, which isn't visible to the RLS and fails to compile.
+         *
+         * So what do you do? Write a macro that effectively acts as a function
+         * to deduplicate code.
+         */
         use api::admin::*;
         use api::link::*;
         use api::user::*;
@@ -66,26 +85,25 @@ fn main() {
 
     run_migrations();
 
-    #[cfg(feature = "no_auth")]
-    {
-        lazy_static! {
-            static ref PROVIDER: auth::no_auth::Provider = auth::no_auth::Provider {};
-        }
-        start!();
-    }
+    let auth_method = env::var("AUTH_METHOD").expect("AUTH_METHOD must be set!");
 
-    #[cfg(feature = "single_user")]
-    {
-        lazy_static! {
-            static ref env_var: String = env::var("PRESHARED_TOKEN").unwrap();
-            static ref PROVIDER: auth::single_user::Provider = auth::single_user::Provider {
-                key: env_var.clone()
-            };
+    match &*auth_method {
+        "no_auth" => {
+            lazy_static! {
+                static ref PROVIDER: auth::no_auth::Provider = auth::no_auth::Provider {};
+            }
+            start!();
         }
-        start!();
+        "single_user" => {
+            lazy_static! {
+                static ref TOKEN: String = env::var("PRESHARED_TOKEN").unwrap();
+                static ref PROVIDER: auth::single_user::Provider =
+                    auth::single_user::Provider { key: TOKEN.clone() };
+            }
+            start!();
+        }
+        _ => println!("Unsupported authentication method!"),
     }
-
-    // TODO: Analyze safety
 }
 
 /// Automated DB migration, to allow an easy-to-install binary.

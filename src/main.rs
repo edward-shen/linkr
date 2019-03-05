@@ -145,14 +145,26 @@ fn parse_database_env() -> String {
 
 #[get("/<url>")]
 fn url_resolver(conn: Database, url: String) -> Option<Redirect> {
+    use diesel::dsl;
     use schema::links::dsl::*;
+
     let results = links
-        .filter(origin.eq(url))
+        .filter(origin.eq(&url))
         .load::<Link>(&conn.0)
         .expect("Failed to get link table");
+
     match results.len() {
         0 => None,
-        1 => Some(Redirect::temporary(results[0].dest.clone())),
+        1 => {
+            let update_result = diesel::update(links.filter(origin.eq(url)))
+                .set((clicks.eq(clicks + 1), last_used.eq(dsl::now)))
+                .execute(&conn.0);
+            match update_result {
+                Ok(_) => (),
+                Err(_) => println!("Failed to update link information"),
+            }
+            Some(Redirect::temporary(results[0].dest.clone()))
+        }
         _ => panic!(
             "Multiple results found for source path {}. Postgres constraints violated!",
             results.len()

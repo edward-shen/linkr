@@ -29,8 +29,6 @@ use dotenv::dotenv;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 
-// use chrono::naive::NaiveDateTime;
-
 use auth::AuthMethod;
 
 use models::*;
@@ -126,7 +124,10 @@ pub fn get_db_connection() -> diesel::PgConnection {
     let database_url = parse_database_env();
     match PgConnection::establish(&database_url) {
         Ok(conn) => conn,
-        Err(e) => panic!(format!("\n{}", e.description())),
+        Err(e) => {
+            println!("\n{}", e.description());
+            panic!("Internal PostgresQL connection initialization")
+        }
     }
 }
 

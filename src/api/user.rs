@@ -9,12 +9,12 @@ pub struct Login {
 }
 
 #[post("/login", data = "<login>")]
-pub fn login(login: Form<Login>) -> Option<String> {
+pub fn login<'a>(login: Form<Login>) -> Option<&'a str> {
     let database_url = env::var("ENABLE_LOGIN").unwrap_or_default();
 
     // Recast String to &str, looks cleaner.
     match &*database_url {
-        "true" => Some(String::from("henlo")),
+        "true" => Some("henlo"),
         _ => None,
     }
 }

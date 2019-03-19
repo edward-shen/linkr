@@ -70,9 +70,9 @@ pub fn new_link(conn: Database, link: Form<CreateLink>, idp: State<&IdP>) -> Sta
             if let Some(key) = idp.provider.get_key() {
                 let ts = link.ts.unwrap_or_default();
                 let result = validate_psk(
-                    key,
-                    format!("origin={}&dest={}&ts={}", link.origin.0, link.dest, ts),
-                    link.hash.clone(),
+                    &key,
+                    &format!("origin={}&dest={}&ts={}", link.origin.0, link.dest, ts),
+                    link.hash.as_ref().map(String::as_ref),
                     ts,
                 );
 
@@ -119,9 +119,9 @@ pub fn delete_link(conn: Database, link: Form<DeleteLink>, idp: State<&IdP>) -> 
             if let Some(key) = idp.provider.get_key() {
                 let ts = link.ts.unwrap_or_default();
                 let result = validate_psk(
-                    key,
-                    format!("origin={}&ts={}", link.origin.0, ts),
-                    link.hash.clone(),
+                    &key,
+                    &format!("origin={}&ts={}", link.origin.0, ts),
+                    link.hash.as_ref().map(String::as_ref),
                     ts,
                 );
 
@@ -139,7 +139,7 @@ pub fn delete_link(conn: Database, link: Form<DeleteLink>, idp: State<&IdP>) -> 
     }
 }
 
-fn validate_psk(key: String, value: String, hash: Option<String>, ts: u64) -> Option<Status> {
+fn validate_psk(key: &str, value: &str, hash: Option<&str>, ts: u64) -> Option<Status> {
     if hash.is_none() {
         return Some(Status::Unauthorized);
     }
@@ -166,13 +166,11 @@ fn validate_psk(key: String, value: String, hash: Option<String>, ts: u64) -> Op
 mod utils {
     mod validate_psk {
         use super::super::*;
+        const KEY: &str = "henlo world";
 
         #[test]
         fn no_hash_provided() {
-            assert_eq!(
-                Some(Status::Unauthorized),
-                validate_psk(String::new(), String::new(), None, 0)
-            );
+            assert_eq!(Some(Status::Unauthorized), validate_psk("", "", None, 0));
         }
 
         #[test]
@@ -180,11 +178,9 @@ mod utils {
             assert_eq!(
                 Some(Status::new(425, "Too Early")),
                 validate_psk(
-                    String::from("henlo world"),
-                    String::from("origin=asdff&dest=hosd&ts=1551681791"),
-                    Some(String::from(
-                        "a84ee951112f89feaa34fe32d052c17187edbc2fb7ec35dfe710d06b5b17ad05"
-                    )),
+                    "henlo world",
+                    "origin=asdff&dest=hosd&ts=1551681791",
+                    Some("a84ee951112f89feaa34fe32d052c17187edbc2fb7ec35dfe710d06b5b17ad05"),
                     1551681791
                 )
             );
@@ -195,9 +191,9 @@ mod utils {
             assert_eq!(
                 Some(Status::BadRequest),
                 validate_psk(
-                    String::from("henlo world"),
-                    String::from("origin=asdff&dest=hosd&ts=1551681791"),
-                    Some(String::new()),
+                    KEY,
+                    "origin=asdff&dest=hosd&ts=1551681791",
+                    Some(""),
                     1551681791
                 )
             );

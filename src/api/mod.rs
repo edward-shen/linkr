@@ -8,7 +8,7 @@ pub mod link;
 pub mod user;
 
 /// Verifies a key and value matches a HMAC SHA256 hash represented as a hexstring.
-fn verify_hash(key: String, value: String, hash: String) -> bool {
+fn verify_hash(key: &str, value: &str, hash: &str) -> bool {
     let mut mac = Hmac::<Sha256>::new_varkey(key.as_bytes()).unwrap();
     mac.input(value.as_bytes());
 
@@ -38,38 +38,22 @@ mod utils {
 
         #[test]
         fn normal_input() {
-            assert!(verify_hash(
-                String::from(GOOD_KEY),
-                String::from(GOOD_VALUE),
-                String::from(GOOD_HASH)
-            ))
+            assert!(verify_hash(GOOD_KEY, GOOD_VALUE, GOOD_HASH))
         }
 
         #[test]
         fn bad_key() {
-            assert!(!verify_hash(
-                String::new(),
-                String::from(GOOD_VALUE),
-                String::from(GOOD_HASH)
-            ))
+            assert!(!verify_hash("", GOOD_VALUE, GOOD_HASH))
         }
 
         #[test]
         fn bad_value() {
-            assert!(!verify_hash(
-                String::from(GOOD_KEY),
-                String::new(),
-                String::from(GOOD_HASH)
-            ))
+            assert!(!verify_hash(GOOD_KEY, "", GOOD_HASH))
         }
 
         #[test]
         fn bad_hash() {
-            assert!(!verify_hash(
-                String::from(GOOD_KEY),
-                String::from(GOOD_VALUE),
-                String::new()
-            ))
+            assert!(!verify_hash(GOOD_KEY, GOOD_VALUE, ""))
         }
     }
     mod decode_hex {

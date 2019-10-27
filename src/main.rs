@@ -124,7 +124,10 @@ pub fn get_db_connection() -> diesel::PgConnection {
     let database_url = parse_database_env();
     match PgConnection::establish(&database_url) {
         Ok(conn) => conn,
-        Err(e) => panic!(format!("\n{}", e.description())),
+        Err(e) => {
+            println!("\n{}", e.description());
+            panic!("Internal PostgresQL connection initialization")
+        }
     }
 }
 

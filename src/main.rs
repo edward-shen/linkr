@@ -29,8 +29,6 @@ use dotenv::dotenv;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 
-// use chrono::naive::NaiveDateTime;
-
 use auth::AuthMethod;
 
 use models::*;
@@ -156,18 +154,29 @@ fn url_resolver(conn: Database, url: String) -> Option<Redirect> {
     match results.len() {
         0 => None,
         1 => {
-            let update_result = diesel::update(links.filter(origin.eq(url)))
+            if let Some(max_clicks) = results[0].expire_clicks {
+                if results[0].clicks == max_clicks {
+                    match diesel::delete(links.filter(origin.eq(&url))).execute(&conn.0) {
+                        Ok(_) => return None,
+                        Err(_) => panic!("Failed to delete link!"),
+                    }
+                }
+            }
+
+            let update_result = diesel::update(links.filter(origin.eq(&url)))
                 .set((clicks.eq(clicks + 1), last_used.eq(dsl::now)))
                 .execute(&conn.0);
-            match update_result {
-                Ok(_) => (),
-                Err(_) => println!("Failed to update link information"),
+
+            if let Err(_) = update_result {
+                panic!("Failed to update link information");
             }
+
             Some(Redirect::temporary(results[0].dest.clone()))
         }
         _ => panic!(
-            "Multiple results found for source path {}. Postgres constraints violated!",
-            results.len()
+            "Found {} results found for source path {}. Postgres constraints violated!",
+            results.len(),
+            url
         ),
     }
 }
